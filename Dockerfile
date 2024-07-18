@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y \
     git \
     zip \
     unzip \
+    cpulimit \
     && rm -rf /var/lib/apt/lists/*
 
 # Install AWS CLI v2
@@ -24,24 +25,38 @@ RUN git clone https://github.com/jimchen2/data-backup-to-s3.git /app
 RUN chmod +x /app/backup-github.sh /app/backup-mongodb.sh
 
 # Create a new script for running backups
-RUN echo '#!/bin/bash\n\
-log_file="/var/log/backups.log"\n\
-\n\
-run_backup() {\n\
-    echo "$(date): Running $1 backup" >> $log_file\n\
-    if ! $1 $2 $3; then\n\
-        echo "$(date): $1 backup failed" >> $log_file\n\
-    else\n\
-        echo "$(date): $1 backup completed successfully" >> $log_file\n\
-    fi\n\
-}\n\
-\n\
-while true; do\n\
-    run_backup "/app/backup-github.sh" "$GITHUB_TOKEN" "$GITHUB_BUCKET_NAME"\n\
-    run_backup "/app/backup-mongodb.sh" "$MONGODB_URI" "$MONGODB_BUCKET_NAME"\n\
-    echo "$(date): Sleeping for $BACKUP_PERIOD minutes" >> $log_file\n\
-    sleep $(($BACKUP_PERIOD * 60))\n\
-done' > /app/run-backups.sh && chmod +x /app/run-backups.sh
+RUN echo '#!/bin/bash
+log_file="/var/log/backups.log"
+
+run_backup() {
+    echo "$(date): Running $1 backup" >> $log_file
+    if ! nice -n 19 cpulimit -l 100 $1 $2 $3; then
+        echo "$(date): $1 backup failed" >> $log_file
+    else
+        echo "$(date): $1 backup completed successfully" >> $log_file
+    fi
+}
+
+github_backup() {
+    while true; do
+        run_backup "/app/backup-github.sh" "$GITHUB_TOKEN" "$GITHUB_BUCKET_NAME"
+        echo "$(date): GitHub backup sleeping for $GITHUB_BACKUP_PERIOD minutes" >> $log_file
+        sleep $(($GITHUB_BACKUP_PERIOD * 60))
+    done
+}
+
+mongodb_backup() {
+    while true; do
+        run_backup "/app/backup-mongodb.sh" "$MONGODB_URI" "$MONGODB_BUCKET_NAME"
+        echo "$(date): MongoDB backup sleeping for $MONGODB_BACKUP_PERIOD minutes" >> $log_file
+        sleep $(($MONGODB_BACKUP_PERIOD * 60))
+    done
+}
+
+github_backup & 
+mongodb_backup & 
+
+wait' > /app/run-backups.sh && chmod +x /app/run-backups.sh
 
 # Set the new script as the entry point
 CMD ["/app/run-backups.sh"]
