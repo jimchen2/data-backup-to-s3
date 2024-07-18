@@ -9,7 +9,7 @@ TOKEN="$1"
 S3_BUCKET="$2"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 ZIPNAME="github_repos_shallow_$TIMESTAMP.zip"
-TEMP_DIR="github_repos_$TIMESTAMP"
+TEMP_DIR="github_repos_shallow_$TIMESTAMP"
 
 # Create temporary directory
 mkdir "$TEMP_DIR"
