@@ -12,7 +12,7 @@ ZIPNAME="github_repos_$TIMESTAMP.zip"
 
 # Clone repositories
 curl -s -H "Authorization: token $TOKEN" "https://api.github.com/user/repos?per_page=100" | \
-grep -o 'git@github.com:[^"]*' | \
+grep -o '"clone_url": "[^"]*' | awk -F'"' '{print $4}' | \
 while read repo; do
     git clone "$repo"
 done
