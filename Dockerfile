@@ -1,10 +1,10 @@
-from mongo:6.0
+FROM mongo:6.0
 
 # Avoid prompts from apt
-env DEBIAN_FRONTEND=noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
 
 # Install necessary packages
-run apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y \
     curl \
     git \
     zip \
@@ -13,19 +13,19 @@ run apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install AWS CLI v2
-run curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv2.zip" && \
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv2.zip" && \
     unzip awscliv2.zip && \
     ./aws/install && \
     rm -rf aws awscliv2.zip
 
 # Clone the GitHub repository
-run git clone https://github.com/jimchen2/data-backup-to-s3.git /app
+RUN git clone https://github.com/jimchen2/data-backup-to-s3.git /app
 
 # Make scripts executable
-run chmod +x /app/backup-github.sh /app/backup-mongodb.sh
+RUN chmod +x /app/backup-github.sh /app/backup-github-shallow.sh /app/backup-mongodb.sh
 
 # Create a new script for running backups
-run echo '#!/bin/bash\n\
+RUN echo '#!/bin/bash\n\
 log_file="/var/log/backups.log"\n\
 \n\
 run_backup() {\n\
@@ -37,11 +37,19 @@ run_backup() {\n\
     fi\n\
 }\n\
 \n\
-github_backup() {\n\
+github_full_backup() {\n\
     while true; do\n\
         run_backup "/app/backup-github.sh" "$GITHUB_TOKEN" "$GITHUB_BUCKET_NAME"\n\
-        echo "$(date): GitHub backup sleeping for $GITHUB_BACKUP_PERIOD minutes" >> $log_file\n\
-        sleep $(($GITHUB_BACKUP_PERIOD * 60))\n\
+        echo "$(date): GitHub full backup sleeping for $GITHUB_FULL_BACKUP_PERIOD minutes" >> $log_file\n\
+        sleep $(($GITHUB_FULL_BACKUP_PERIOD * 60))\n\
+    done\n\
+}\n\
+\n\
+github_shallow_backup() {\n\
+    while true; do\n\
+        run_backup "/app/backup-github-shallow.sh" "$GITHUB_TOKEN" "$GITHUB_BUCKET_NAME"\n\
+        echo "$(date): GitHub shallow backup sleeping for $GITHUB_SHALLOW_BACKUP_PERIOD minutes" >> $log_file\n\
+        sleep $(($GITHUB_SHALLOW_BACKUP_PERIOD * 60))\n\
     done\n\
 }\n\
 \n\
@@ -53,10 +61,11 @@ mongodb_backup() {\n\
     done\n\
 }\n\
 \n\
-github_backup & \n\
+github_full_backup & \n\
+github_shallow_backup & \n\
 mongodb_backup & \n\
 \n\
 wait' > /app/run-backups.sh && chmod +x /app/run-backups.sh
 
 # Set the new script as the entry point
-cmd ["/app/run-backups.sh"]
+CMD ["/app/run-backups.sh"]
