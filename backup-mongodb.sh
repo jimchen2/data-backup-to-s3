@@ -14,7 +14,7 @@ BACKUP_FILE="/tmp/mongodb_backup_$TIMESTAMP.gz"
 mongodump --uri="$MONGODB_URI" --gzip --archive="$BACKUP_FILE"
 
 # Upload to S3
-aws s3 cp "$BACKUP_FILE" "s3://$S3_BUCKET_NAME/mongodb_backups/mongodb_backup_$TIMESTAMP.gz"
+aws s3 cp "$BACKUP_FILE" "s3://$S3_BUCKET_NAME/mongodb_backup_$TIMESTAMP.gz"
 
 # Clean up
 rm "$BACKUP_FILE"
