@@ -8,5 +8,5 @@ docker build -t data-backup-to-s3 .
 
 ```
 ## Config
-docker run -d --env-file .env data-backup-to-s3
+docker run -d --restart always --env-file .env data-backup-to-s3
 ```
