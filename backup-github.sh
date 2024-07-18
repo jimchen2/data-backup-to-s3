@@ -15,11 +15,15 @@ TEMP_DIR="github_repos_$TIMESTAMP"
 mkdir "$TEMP_DIR"
 cd "$TEMP_DIR" || exit 1
 
-# Clone repositories
+# Clone repositories under 300 MB
 curl -s -H "Authorization: token $TOKEN" "https://api.github.com/user/repos?per_page=100" | \
-grep -o '"clone_url": "[^"]*' | awk -F'"' '{print $4}' | \
-while read repo; do
-    git clone "https://${TOKEN}@github.com/${repo#https://github.com/}"
+jq -r '.[] | select(.size < 300000) | {name: .name, clone_url: .clone_url} | @base64' | \
+while read -r repo; do
+    decoded=$(echo "$repo" | base64 --decode)
+    name=$(echo "$decoded" | jq -r '.name')
+    clone_url=$(echo "$decoded" | jq -r '.clone_url')
+    echo "Cloning $name..."
+    git clone "https://${TOKEN}@github.com/${clone_url#https://github.com/}" "$name"
 done
 
 # Go back to parent directory
@@ -31,7 +35,7 @@ zip -r "$ZIPNAME" "$TEMP_DIR"
 # Upload to S3
 aws s3 cp "$ZIPNAME" "s3://$S3_BUCKET/$ZIPNAME"
 
-echo "All repositories cloned, zipped to $ZIPNAME, and uploaded to S3 bucket $S3_BUCKET"
+echo "All repositories under 300 MB cloned, zipped to $ZIPNAME, and uploaded to S3 bucket $S3_BUCKET"
 
 # Clean up
 rm -rf "$TEMP_DIR"
