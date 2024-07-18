@@ -1,10 +1,10 @@
 #!/bin/bash
 
-log_file="/var/log/backups.log"
+log_file="/var/log/backups.sh"
 
 run_backup() {
     echo "$(date): Running $1 backup" >> $log_file
-    if ! cpulimit -l 100 $2 $3 $4 $5; then
+    if ! cpulimit -l 100 -- $2 "${@:3}"; then
         echo "$(date): $1 backup failed" >> $log_file
     else
         echo "$(date): $1 backup completed successfully" >> $log_file
