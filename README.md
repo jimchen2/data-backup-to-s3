@@ -1,12 +1,12 @@
 ## Build
 
 ```
-docker build -t data-backup-to-s3 .
+docker build -t jimchen2/data-backup-to-s3 .
 ```
 
 ## Run
 
 ```
 ## Config
-docker run -d --restart always --env-file .env data-backup-to-s3
+docker run -d --restart always --env-file .env jimchen2/data-backup-to-s3
 ```
