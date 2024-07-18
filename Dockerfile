@@ -30,7 +30,7 @@ log_file="/var/log/backups.log"\n\
 \n\
 run_backup() {\n\
     echo "$(date): Running $1 backup" >> $log_file\n\
-    if ! nice -n 19 cpulimit -l 100 $1 $2 $3; then\n\
+    if ! cpulimit -l 100 $1 $2 $3; then\n\
         echo "$(date): $1 backup failed" >> $log_file\n\
     else\n\
         echo "$(date): $1 backup completed successfully" >> $log_file\n\
